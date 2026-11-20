@@ -58,3 +58,10 @@ class TestIPRule:
     async def test_same_subnet(self):
         assert await self.rs._is_ip_rule_match(self.rule, self.fact6)
         assert (not await self.rs.is_fact_allowed(self.fact6))
+
+    async def test_ip_rule_does_not_match_as_regex_prefix(self):
+        rs = RuleSet(rules=[Rule(trait='host.ip.address', action=RuleAction.DENY, match='127.0.0.1')])
+        assert not await rs.is_fact_allowed(Fact(trait='host.ip.address', value='127.0.0.1'))
+        assert await rs.is_fact_allowed(Fact(trait='host.ip.address', value='127.0.0.10'))
+        assert await rs.is_fact_allowed(Fact(trait='host.ip.address', value='127.0.0.100'))
+        assert await rs.is_fact_allowed(Fact(trait='host.ip.address', value='127.0.0.0/24'))

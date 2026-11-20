@@ -18,6 +18,10 @@ class RuleSet:
             if await self._is_ip_rule_match(rule, fact):
                 allowed = await self._rule_judgement(rule.action)
                 continue
+            if await self._is_ip_comparison(rule, fact):
+                # Both sides are IPs, so the IP comparison is authoritative. Falling back to a regex match here
+                # would treat the rule as a prefix pattern (e.g. a rule for 10.0.0.1 would also match 10.0.0.10).
+                continue
             if await self._is_regex_rule_match(rule, fact):
                 allowed = await self._rule_judgement(rule.action)
         return allowed
@@ -65,6 +69,13 @@ class RuleSet:
         except (ValueError, ipaddress.AddressValueError):
             pass
         return False
+
+    async def _is_ip_comparison(self, rule, fact):
+        if rule.match == '.*':
+            return False
+        fact_is_ip = await self._is_ip_address(fact.value) or await self._is_ip_network(fact.value)
+        rule_is_ip = await self._is_ip_address(rule.match) or await self._is_ip_network(rule.match)
+        return fact_is_ip and rule_is_ip
 
     @staticmethod
     async def _is_regex_rule_match(rule, fact):
